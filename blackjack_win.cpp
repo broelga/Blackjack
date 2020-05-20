@@ -1,5 +1,5 @@
 
-/* Blackjack
+/* Blackjack 
 
 This game will be a simple* game where the computer (dealer) will deal two cards to the player (user). The player will have the 
 choice to hit, stand, or split (if cards are identical and != A).
