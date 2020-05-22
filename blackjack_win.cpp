@@ -117,7 +117,7 @@ int main()
             numPlayerCardsSplit = 0, numDealerCards = 0;
         int playerSum = 0, dealerSum = 0, playerSumSplit = 0; // Stores the sum of each hand's score
         unsigned choice;                                      // Used for player choice of options
-        unsigned counter = 1;                                 // Counts iterations of menu. Used for handIsSplit
+        unsigned round = 1;                                 // Counts iterations of menu. Used for handIsSplit
         bool isValid = false;                                 // Used for input validation
 
         // Clears screen
@@ -158,7 +158,7 @@ int main()
             }
             else // Continue to menu
             {
-                counter = 1;     // Reset counter
+                round = 1;     // Reset round
                 isValid = false; // Set to false before loop
 
                 // Begin menu loop
@@ -168,17 +168,17 @@ int main()
                     if (handIsSplit)
                     {
                         // Header for hand #1
-                        if (counter == 1)
+                        if (round == 1)
                             cout << "Hand #1\n"
                                  << flush;
                         // Header for hand #2
-                        if (counter == 2)
+                        if (round == 2)
                             cout << "Hand #2\n"
                                  << flush;
-                        counter++;
+                        round++;
                     }
                     else
-                        counter = 3; // Adjusted for loop validation if !handIsSplit
+                        round = 3; // Adjusted for loop validation if !handIsSplit
 
                     cout << "1. Hit\n"
                          << "2. Stand\n"
