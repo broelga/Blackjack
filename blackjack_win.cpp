@@ -67,7 +67,7 @@ bool bust = false;        // Flag for bust
 bool doubleDown = false;  // Flag for double down
 bool hit = false;         // Flag for hit
 bool stand = false;       // Flag for stand
-bool canSplit = false;     // Flag for split availability
+bool canSplit = true;     // Flag for split availability
 bool handIsSplit = false; // Flag showing hand has been split
 
 // Function prototypes
@@ -97,8 +97,7 @@ void playAgain();                                                               
 //*****************************************************************************************************************************************************************
 //              Split               *
 //***********************************
-// TODO: If hand is split, there needs to be a way to be able to hit/stand on each hand, rather than one option.
-// TODO: Create additional menu to display further option if handIsSplit
+// TODO: Work on functions to account for separate hand dealing and such. Stand also controls both of them. Need conditions
 // TODO: Right now if one hand bust, player loses. Create separate entities of playerHand and splitHand
 // This will allow player to control each hand separately. Scoring should be unique as well.
 //*****************************************************************************************************************************************************************
@@ -114,11 +113,12 @@ int main()
         int playerHand[HAND_SIZE][g_COL];                    // Array for player's hand
         int dealerHand[HAND_SIZE][g_COL];                    // Array for dealer's hand
         int splitHand[HAND_SIZE][g_COL];                     // Array for player's split hand
-        unsigned totalNumCardsDealt = 0, numPlayerCards = 0, // Keeps track of the number of cards for each array
+        unsigned totalNumCardsDealt = 0, numPlayerCards = 0, // Counts the number of cards for each array
             numPlayerCardsSplit = 0, numDealerCards = 0;
         int playerSum = 0, dealerSum = 0, playerSumSplit = 0; // Stores the sum of each hand's score
         unsigned choice;                                      // Used for player choice of options
-        bool isValid;                                         // Used for input validation
+        unsigned counter = 1;                                 // Counts iterations of menu. Used for handIsSplit
+        bool isValid = false;                                 // Used for input validation
 
         // Clears screen
         system("CLS");
@@ -133,7 +133,7 @@ int main()
         // Loop player turn until stand, bust, or blackjack
         while (playerTurn)
         {
-            // Player should also see dealer's one card.
+            // Check status of flags
             if (stand)
             {
                 this_thread::sleep_for(chrono::milliseconds(600));
@@ -156,18 +156,40 @@ int main()
                 playerTurn = false;
                 dealerTurn = true;
             }
-            else if (canSplit && !handIsSplit)
+            else // Continue to menu
             {
-                // To be used after initial deal if split is available
-                do
+                counter = 1;     // Reset counter
+                isValid = false; // Set to false before loop
+
+                // Begin menu loop
+                while (!isValid || counter < 3)
                 {
                     // Prompt menu
-                    // Function call: if (split) then this.
+                    if (handIsSplit)
+                    {
+                        // Header for hand #1
+                        if (counter == 1)
+                            cout << "Hand #1\n"
+                                 << flush;
+                        // Header for hand #2
+                        if (counter == 2)
+                            cout << "Hand #2\n"
+                                 << flush;
+                        counter++;
+                    }
+                    else
+                        counter = 3; // Adjusted for loop validation if !handIsSplit
+
                     cout << "1. Hit\n"
                          << "2. Stand\n"
-                         << "3. Double down\n"
-                         << "4. Split\n\n"
-                         << "Enter selection: " << flush;
+                         << "3. Double down\n";
+
+                    if (canSplit)
+                        cout << "4. Split\n\n";
+                    else
+                        cout << "\n";
+
+                    cout << "Enter selection: " << flush;
                     cin >> choice;
 
                     switch (choice)
@@ -191,18 +213,23 @@ int main()
                         doubleDown = true;
                         isValid = true;
                         break;
+
                     case 4:
-                        // Clears screen, prompts game data
-                        system("CLS");
-                        handIsSplit = true;
-                        showHandDealer(dealerHand, numDealerCards);
-                        showSum(dealerSum);
-                        splitOneHand(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
-                        dealOneCardPlayer(deck, playerHand, splitHand, totalNumCardsDealt, numPlayerCards,
-                                          numPlayerCardsSplit, playerSum, playerSumSplit);
-                        // playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
-                        isValid = true;
-                        break;
+                        if (canSplit)
+                        {
+                            // Clears screen, prompts game data
+                            system("CLS");
+                            handIsSplit = true;
+                            showHandDealer(dealerHand, numDealerCards);
+                            showSum(dealerSum);
+                            splitOneHand(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
+                            dealOneCardPlayer(deck, playerHand, splitHand, totalNumCardsDealt, numPlayerCards,
+                                              numPlayerCardsSplit, playerSum, playerSumSplit);
+                            // playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
+                            isValid = true;
+                            break;
+                        }
+
                     default: // Input validation
                         // Clears error status
                         if (!cin)
@@ -216,61 +243,9 @@ int main()
                         showSum(dealerSum);
                         showHandPlayer(playerHand, numPlayerCards);
                         showSum(playerSum);
-                        // checkScore(playerSum, round);
+                        counter--;
                     }
-                } while (!isValid);
-            }
-            else
-            {
-                do
-                {
-                    // Prompt menu
-                    // To be used after initial deal if no split is available and subsequent deals
-                    // Function call: else, then this. (Or can be if (!split))
-                    cout << "1. Hit\n"
-                         << "2. Stand\n"
-                         << "3. Double down\n\n"
-                         << "Enter selection: " << flush;
-                    cin >> choice;
-
-                    switch (choice)
-                    {
-                    case 1:
-                        // Clears screen, prompts game data
-                        system("CLS");
-                        showHandDealer(dealerHand, numDealerCards);
-                        showSum(dealerSum);
-                        dealOneCardPlayer(deck, playerHand, splitHand, totalNumCardsDealt, numPlayerCards,
-                                          numPlayerCardsSplit, playerSum, playerSumSplit);
-                        isValid = true;
-                        break;
-                    case 2:
-                        // Player stands and ends loop
-                        stand = true;
-                        isValid = true;
-                        break;
-                    case 3:
-                        // Player chooses to double down (not functional yet)
-                        doubleDown = true;
-                        isValid = true;
-                        break;
-                    default: // Input validation
-                        // Clears error status
-                        if (!cin)
-                            cin.clear();
-
-                        // Clears screen, shows invalid choice, reprompts game data
-                        system("CLS");
-                        cout << "invalid choice.\n";
-                        cin.ignore(256, '\n');
-                        isValid = false;
-                        showHandDealer(dealerHand, numDealerCards);
-                        showSum(dealerSum);
-                        showHandPlayer(playerHand, numPlayerCards);
-                        showSum(playerSum);
-                        // checkScore(playerSum, round);
-                    }
-                } while (!isValid);
+                }
             }
         }
 
@@ -361,7 +336,7 @@ int main()
         showSum(dealerSum);
         showHandPlayer(playerHand, numPlayerCards);
         showSum(playerSum);
-        
+
         if (handIsSplit)
         {
             showHandSplit(splitHand, numPlayerCardsSplit);
