@@ -1,0 +1,6 @@
+v0.17
+Additional functionality - splitHand is now working. 
+Some functionality needs to be implemented such as the ability to control each hand separately. 
+This is next on the list.
+
+* Enable bools for turn on certain options for testing the game, ex: canSplit = true, allows for you to split the deck.
