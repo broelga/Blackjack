@@ -67,7 +67,7 @@ bool bust = false;        // Flag for bust
 bool doubleDown = false;  // Flag for double down
 bool hit = false;         // Flag for hit
 bool stand = false;       // Flag for stand
-bool canSplit = false;     // Flag for split availability
+bool canSplit = false;    // Flag for split availability
 bool handIsSplit = false; // Flag showing hand has been split
 
 // Function prototypes
@@ -97,7 +97,7 @@ void playAgain();                                                               
 //*****************************************************************************************************************************************************************
 //              Split               *
 //***********************************
-// TODO: Work on functions to account for separate hand dealing and such. Stand also controls both of them. Need conditions
+// TODO: Work on functions to account for separate hand dealing and such. Hit/stand/DD controls both hands. Need conditions
 // TODO: Right now if one hand bust, player loses. Create separate entities of playerHand and splitHand
 // This will allow player to control each hand separately. Scoring should be unique as well.
 //*****************************************************************************************************************************************************************
@@ -117,7 +117,7 @@ int main()
             numPlayerCardsSplit = 0, numDealerCards = 0;
         int playerSum = 0, dealerSum = 0, playerSumSplit = 0; // Stores the sum of each hand's score
         unsigned choice;                                      // Used for player choice of options
-        unsigned round = 1;                                 // Counts iterations of menu. Used for handIsSplit
+        unsigned round = 1;                                   // Counts iterations of menu. Used for handIsSplit
         bool isValid = false;                                 // Used for input validation
 
         // Clears screen
@@ -158,11 +158,11 @@ int main()
             }
             else // Continue to menu
             {
-                round = 1;     // Reset round
+                round = 1;       // Reset round
                 isValid = false; // Set to false before loop
 
                 // Begin menu loop
-                while (!isValid || counter < 3)
+                while (!isValid || round < 3)
                 {
                     // Prompt menu
                     if (handIsSplit)
@@ -243,7 +243,7 @@ int main()
                         showSum(dealerSum);
                         showHandPlayer(playerHand, numPlayerCards);
                         showSum(playerSum);
-                        counter--;
+                        round--;
                     }
                 }
             }
