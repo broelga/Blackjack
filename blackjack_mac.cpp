@@ -1,5 +1,5 @@
 
-/* Blackjack 
+/* Blackjack
 
 This game will be a simple* game where the computer (dealer) will deal two cards to the player (user). The player will have the 
 choice to hit, stand, or split (if cards are identical and != A).
@@ -46,6 +46,7 @@ Dealer will hit on 17
 #include <iomanip> // Needed for output formatting
 #include <chrono>  // Needed for seeding random number generator
 #include <random>  // Needed for random number generator
+#include <thread>  // Needed for sleep_for()
 using namespace std;
 
 // Global constants
@@ -66,37 +67,41 @@ bool bust = false;        // Flag for bust
 bool doubleDown = false;  // Flag for double down
 bool hit = false;         // Flag for hit
 bool stand = false;       // Flag for stand
-bool canSplit = false;    // Flag for split availability
+bool canSplit = true;     // Flag for split availability
 bool handIsSplit = false; // Flag showing hand has been split
 
 // Function prototypes
-void shuffleDeck(int[][g_COL]);                                               // Function that randomly generates the deck
-void cardCounterShuffle(int, int &, int &, int &, int &, int &, int &, int &, // Counters used to keep track of the number of each card in deck while
-                        int &, int &, int &, int &, int &, int &, int &);     // deck is generated
-int cardPoints(int);                                                          // Function that assigns the points for each card in deck
-void dealCards(int[][g_COL], int[][g_COL], int[][g_COL], int[][g_COL], int,   // Function that deals the initial cards to player and dealer
+void shuffleDeck(int[][g_COL]);                                                     // Function that randomly generates the deck
+void cardCounterShuffle(const int, int &, int &, int &, int &, int &, int &, int &, // Counters used to keep track of the number of each card in deck while
+                        int &, int &, int &, int &, int &, int &, int &);           // deck is generated
+int cardPoints(const int);                                                          // Function that assigns the points for each card in deck
+void dealCards(int[][g_COL], int[][g_COL], int[][g_COL], int[][g_COL], const int,   // Function that deals the initial cards to player and dealer
                unsigned &, unsigned &, unsigned, unsigned &, int &, int &, int &);
 void dealOneCardPlayer(int[][g_COL], int[][g_COL], int[][g_COL], unsigned &, // Function that deals one card to player
-                       unsigned &, unsigned, int &, int &);
+                       unsigned &, unsigned &, int &, int &);
 void dealOneCardDealer(int[][g_COL], int[][g_COL], unsigned &, unsigned &, int &); // Function that deals one card to dealer
-void showHandPlayer(const int[][g_COL], const int[][g_COL], unsigned, unsigned);   // Function that displays the hand of the player
-void showHandDealer(const int[][g_COL], unsigned);                                 // Function that displays the hand of the dealer
-void showDeck(const int[][g_COL]);                                                 // Function that displays the entire deck (only used for testing purposes)
-int sumHand(const int[][g_COL], int);                                              // Function that sums the hand that is used to call the function
-void showSum(int);                                                                 // Function that displays the sum of the hand that is used to call the function
-void checkScore(int, unsigned);                                                    // Function that checks score of the hand used to call the function
 void playerSplitHand(int[][g_COL], int[][g_COL], unsigned &, unsigned &, int &);   // Function that handles the split hand of the player
+void splitOneHand(int[][g_COL], int[][g_COL], unsigned &, unsigned &);             // Splits hand of player into two separate hands with one card each
+void showHandPlayer(const int[][g_COL], const unsigned);                           // Function that displays the hand of the player
+void showHandSplit(const int[][g_COL], const unsigned);                            // Function to display the split hand of the player
+void showHandDealer(const int[][g_COL], const unsigned);                           // Function that displays the hand of the dealer
+void showDeck(const int[][g_COL]);                                                 // Function that displays the entire deck (only used for testing purposes)
+int sumHand(const int[][g_COL], const int);                                        // Function that sums the hand that is used to call the function
+void showSum(const int);                                                           // Function that displays the sum of the hand that is used to call the function
+void checkScore(const int, const unsigned);                                        // Function that checks score of the hand used to call the function
 void callBlackjack();                                                              // Function that displays blackjack to player
 void callBust();                                                                   // Function that displays bust to player
-void declareWinner(int &, int &, int &);                                           // Function that declares the winner
+void declareWinner(const int, const int, const int);                               // Function that declares the winner
 void playAgain();                                                                  // Function that prompts the player to play again
 
-//**************************************************************************************************************************************************************************
-// 3rd array created for splitHand and is functioning. // Might be better to add a new row and col for the split hand (complex
-// Do this once they game is playable. Don't get too carried away.
-// TODO: Split needs to actually split. The card in playerHand[1][0]/[1][1] must be transferred to split[0]0]/[0][1].
-// TODO: Display the playerHand and playerSplitHand cards side-by-side and the totals below. (Hand #1   Hand #2) //close enough..
-//**************************************************************************************************************************************************************************
+//*****************************************************************************************************************************************************************
+//              Split               *
+//***********************************
+// TODO: If hand is split, there needs to be a way to be able to hit/stand on each hand, rather than one option.
+// TODO: Create additional menu to display further option if handIsSplit
+// TODO: Right now if one hand bust, player loses. Create separate entities of playerHand and splitHand
+// This will allow player to control each hand separately. Scoring should be unique as well.
+//*****************************************************************************************************************************************************************
 
 int main()
 {
@@ -106,9 +111,9 @@ int main()
         // Variables for game
         const int HAND_SIZE = 10;                            // Max size of the hands
         int deck[g_DECK_SIZE][g_COL];                        // Array for card deck
-        int playerHand[HAND_SIZE][g_COL] = {0};              // Array for player's hand
-        int dealerHand[HAND_SIZE][g_COL] = {0};              // Array for dealer's hand
-        int splitHand[HAND_SIZE][g_COL] = {0};               // Array for player's split hand
+        int playerHand[HAND_SIZE][g_COL];                    // Array for player's hand
+        int dealerHand[HAND_SIZE][g_COL];                    // Array for dealer's hand
+        int splitHand[HAND_SIZE][g_COL];                     // Array for player's split hand
         unsigned totalNumCardsDealt = 0, numPlayerCards = 0, // Keeps track of the number of cards for each array
             numPlayerCardsSplit = 0, numDealerCards = 0;
         int playerSum = 0, dealerSum = 0, playerSumSplit = 0; // Stores the sum of each hand's score
@@ -131,12 +136,14 @@ int main()
             // Player should also see dealer's one card.
             if (stand)
             {
+                this_thread::sleep_for(chrono::milliseconds(600));
                 playerTurn = false;
                 dealerTurn = true;
             }
             else if (bust)
             {
                 // Call bust and ends loop
+                this_thread::sleep_for(chrono::milliseconds(600));
                 callBust();
                 playerTurn = false;
                 dealerTurn = true;
@@ -144,6 +151,7 @@ int main()
             else if (blackjack)
             {
                 // Call blackjack and ends loop
+                this_thread::sleep_for(chrono::milliseconds(600));
                 callBlackjack();
                 playerTurn = false;
                 dealerTurn = true;
@@ -189,9 +197,10 @@ int main()
                         handIsSplit = true;
                         showHandDealer(dealerHand, numDealerCards);
                         showSum(dealerSum);
+                        splitOneHand(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
                         dealOneCardPlayer(deck, playerHand, splitHand, totalNumCardsDealt, numPlayerCards,
                                           numPlayerCardsSplit, playerSum, playerSumSplit);
-                        playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
+                        // playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
                         isValid = true;
                         break;
                     default: // Input validation
@@ -205,7 +214,7 @@ int main()
                         cin.ignore(256, '\n');
                         showHandDealer(dealerHand, numDealerCards);
                         showSum(dealerSum);
-                        showHandPlayer(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
+                        showHandPlayer(playerHand, numPlayerCards);
                         showSum(playerSum);
                         // checkScore(playerSum, round);
                     }
@@ -257,7 +266,7 @@ int main()
                         isValid = false;
                         showHandDealer(dealerHand, numDealerCards);
                         showSum(dealerSum);
-                        showHandPlayer(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
+                        showHandPlayer(playerHand, numPlayerCards);
                         showSum(playerSum);
                         // checkScore(playerSum, round);
                     }
@@ -281,37 +290,62 @@ int main()
         else // Clears buffer
             cin.ignore(100, '\n');
 
-        // Clear screen
-        system("clear");
-
         //***************************************
         //             Dealer's turn            *
         //***************************************
         while (dealerTurn && !playerTurn)
         {
-            // dealOneCard, and checkScore
-            // Dealer will hit <= 17.
+            // Clear screen
+            system("clear");
 
             // Dealer is dealt a card and plays
             dealOneCardDealer(deck, dealerHand, totalNumCardsDealt, numDealerCards, dealerSum);
 
             // Depending on flag, dealer will choose its move
             if (hit)
+            {
+                unsigned round = 1;
+                string dealerHits = "Dealer is hitting. . .";
+                this_thread::sleep_for(chrono::milliseconds(50));
+
+                for (int i = 0; i < dealerHits.length(); i++)
+                {
+                    if (i < (dealerHits.length() - 5))
+                    {
+                        this_thread::sleep_for(chrono::milliseconds(20));
+                        cout << dealerHits[i] << flush;
+                    }
+                    else
+                    {
+                        this_thread::sleep_for(chrono::milliseconds(300));
+                        cout << dealerHits[i] << flush;
+                    }
+                }
+
+                this_thread::sleep_for(chrono::milliseconds(200));
+                cout << endl;
+
                 continue;
+            }
 
             else if (stand)
+            {
                 // Stand is flagged, loop ends
+                this_thread::sleep_for(chrono::milliseconds(600));
                 dealerTurn = false;
+            }
 
             else if (blackjack)
             {
                 // Blackjack is declared, loop ends
+                this_thread::sleep_for(chrono::milliseconds(600));
                 callBlackjack();
                 dealerTurn = false;
             }
             else if (bust)
             {
                 // Dealer busts, loop ends.
+                this_thread::sleep_for(chrono::milliseconds(600));
                 callBust();
                 dealerTurn = false;
             }
@@ -325,8 +359,14 @@ int main()
         // Show player and dealer hands and scores
         showHandDealer(dealerHand, numDealerCards);
         showSum(dealerSum);
-        showHandPlayer(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
+        showHandPlayer(playerHand, numPlayerCards);
         showSum(playerSum);
+        
+        if (handIsSplit)
+        {
+            showHandSplit(splitHand, numPlayerCardsSplit);
+            showSum(playerSumSplit);
+        }
 
         // Declare winner and prompt to play again
         declareWinner(playerSum, playerSumSplit, dealerSum);
@@ -385,7 +425,7 @@ void playAgain()
 // **************************************************************************
 // Function that declares the winner                                        *
 // **************************************************************************
-void declareWinner(int &playerSum, int &playerSumSplit, int &dealerSum)
+void declareWinner(const int playerSum, const int playerSumSplit, const int dealerSum)
 {
     if (dealerSum <= 21 && playerSum <= 21)
     {
@@ -433,7 +473,7 @@ void callBust()
 // **************************************************************************
 // Function that checks score of the hand used to call the function         *
 // **************************************************************************
-void checkScore(int sum, unsigned round)
+void checkScore(const int sum, const unsigned round)
 {
     // Reset global bools at beginning of function
     blackjack = false, bust = false, doubleDown = false, hit = false, stand = false;
@@ -487,7 +527,7 @@ void checkScore(int sum, unsigned round)
 // Function that displays the sum of the hand that is used to call the      *
 // function                                                                 *
 // **************************************************************************
-void showSum(int sum)
+void showSum(const int sum)
 {
     cout << "Total: " << sum << "\n\n"
          << flush;
@@ -496,7 +536,7 @@ void showSum(int sum)
 // **************************************************************************
 // Function that sums the hand that is used to call the function            *
 // **************************************************************************
-int sumHand(const int hand[][g_COL], int numCards)
+int sumHand(const int hand[][g_COL], const int numCards)
 {
     // Local variables
     int sum = 0;
@@ -513,7 +553,7 @@ int sumHand(const int hand[][g_COL], int numCards)
 // Function that deals one card to player                                   *
 // **************************************************************************
 void dealOneCardPlayer(int deck[][g_COL], int playerHand[][g_COL], int splitHand[][g_COL], unsigned &totalNumCardsDealt,
-                       unsigned &numPlayerCards, unsigned numPlayerCardsSplit, int &playerSum, int &playerSumSplit)
+                       unsigned &numPlayerCards, unsigned &numPlayerCardsSplit, int &playerSum, int &playerSumSplit)
 {
     // Local variables
     static unsigned round = 1;  // Keeps count of number of rounds or times the function has been called.
@@ -524,6 +564,9 @@ void dealOneCardPlayer(int deck[][g_COL], int playerHand[][g_COL], int splitHand
     if (reset)
         round = 1;
 
+    // ***************
+    // Player's Hand
+    // ***************
     // Deal one card, count cards dealt
     playerHand[i][g_CARD_INDEX] = deck[j][g_CARD_INDEX];     // Assigns card [j,0] to [i,0]
     playerHand[i][g_POINTS_INDEX] = deck[j][g_POINTS_INDEX]; // Assigns score of [j,1] to [i, 1]
@@ -549,17 +592,27 @@ void dealOneCardPlayer(int deck[][g_COL], int playerHand[][g_COL], int splitHand
         }
     }
 
+    // Display hand and total score of playerHand
     if (round > 1)
     {
-        if (handIsSplit)
-            playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
-
-        // Display hand and total score
-        showHandPlayer(playerHand, splitHand, numPlayerCards, numPlayerCardsSplit);
+        showHandPlayer(playerHand, numPlayerCards);
         showSum(playerSum);
         checkScore(playerSum, round);
     }
 
+    // Deal one card to playerSplitHand deal with score and display
+    if (handIsSplit)
+    {
+        playerSplitHand(deck, splitHand, totalNumCardsDealt, numPlayerCardsSplit, playerSumSplit);
+
+        // Compute sum of cards in hand
+        playerSumSplit = sumHand(splitHand, numPlayerCardsSplit);
+
+        // Display hand and total score
+        showHandSplit(splitHand, numPlayerCardsSplit);
+        showSum(playerSumSplit);
+        checkScore(playerSumSplit, round);
+    }
     // Check first two cards and see if they are equal. If so, player is allowed to split
     if (round == 2)
     {
@@ -625,9 +678,21 @@ void dealOneCardDealer(int deck[][g_COL], int hand[][g_COL], unsigned &totalNumC
 }
 
 // **************************************************************************
+// Function that splits the hand, assign one card from one deck to the other*
+// **************************************************************************
+// Works
+void splitOneHand(int hand[][g_COL], int splitHand[][g_COL], unsigned &numCardsHand, unsigned &numCardsSplit)
+{
+    splitHand[0][g_CARD_INDEX] = hand[1][g_CARD_INDEX]; // Assigns card [j,0] to [i,0]
+    splitHand[0][g_POINTS_INDEX] = hand[1][g_POINTS_INDEX];
+    numCardsHand--;
+    numCardsSplit++;
+}
+
+// **************************************************************************
 // Function that deals the initial cards to player and dealer               *
 // **************************************************************************
-void dealCards(int deck[][g_COL], int playerHand[][g_COL], int splitHand[][g_COL], int dealerHand[][g_COL], int handSize,
+void dealCards(int deck[][g_COL], int playerHand[][g_COL], int splitHand[][g_COL], int dealerHand[][g_COL], const int handSize,
                unsigned &totalNumCardsDealt, unsigned &numPlayerCards, unsigned numPlayerCardsSplit, unsigned &numDealerCards,
                int &playerSum, int &playerSumSplit, int &dealerSum)
 {
@@ -651,29 +716,24 @@ void playerSplitHand(int deck[][g_COL], int hand[][g_COL], unsigned &totalNumCar
                      unsigned &numPlayerCardsSplit, int &playerSumSplit)
 {
     // Local variables
-    unsigned round = 1;          // Keeps count of number of rounds or times the function has been called.
+    static unsigned round = 1;   // Keeps count of number of rounds or times the function has been called.
     int i = numPlayerCardsSplit; // Stores the number of cards in the hand
     int j = totalNumCardsDealt;  // Stores the total number of cards dealt (player and dealer)
+
+    if (reset)
+        round = 1;
 
     // Deal one card, count cards dealt
     hand[i][g_CARD_INDEX] = deck[j][g_CARD_INDEX];
     hand[i][g_POINTS_INDEX] = deck[j][g_POINTS_INDEX];
     numPlayerCardsSplit++;
     totalNumCardsDealt++;
-
-    // Compute sum of cards in hand
-    playerSumSplit = sumHand(hand, numPlayerCardsSplit);
-
-    // Display hand and total score
-    showSum(playerSumSplit);
-    checkScore(playerSumSplit, round);
 }
 
 // **************************************************************************
 // Function that displays the hand of the player                            *
 // **************************************************************************
-void showHandPlayer(const int playerHand[][g_COL], const int splitHand[][g_COL], unsigned numPlayerCards,
-                    unsigned numSplitCards)
+void showHandPlayer(const int playerHand[][g_COL], const unsigned numPlayerCards)
 {
     // Local variables
     unsigned numDigits = 0, highest = 0; // Used for output formatting
@@ -755,14 +815,18 @@ void showHandPlayer(const int playerHand[][g_COL], const int splitHand[][g_COL],
         }
         cout << setw(3) << flush;
     }
+    cout << "\n\n";
+}
 
+void showHandSplit(const int splitHand[][g_COL], const unsigned numCards)
+{
     // For split hand display
     if (handIsSplit)
     {
-        cout << "\n\nHand #2:\n"
+        cout << "Hand #2:\n"
              << flush;
 
-        for (int i = 0; i < numSplitCards; i++)
+        for (int i = 0; i < numCards; i++)
         {
             for (int j = 0; j < 1; j++)
             {
@@ -810,7 +874,7 @@ void showHandPlayer(const int playerHand[][g_COL], const int splitHand[][g_COL],
 // **************************************************************************
 // Function that displays the hand of the dealer                            *
 // **************************************************************************
-void showHandDealer(const int hand[][g_COL], unsigned numCards)
+void showHandDealer(const int hand[][g_COL], const unsigned numCards)
 {
     // Local variables
     unsigned numDigits = 0, highest = 0; // Used for output formatting
@@ -1059,7 +1123,7 @@ void shuffleDeck(int deck[][g_COL])
 // Counters used to keep track of the number of each card in deck while     *
 // deck is generated                                                        *
 // **************************************************************************
-void cardCounterShuffle(int card, int &card1, int &card2, int &card3, int &card4,
+void cardCounterShuffle(const int card, int &card1, int &card2, int &card3, int &card4,
                         int &card5, int &card6, int &card7, int &card8, int &card9,
                         int &card10, int &cardJ, int &cardQ, int &cardK, int &cardA)
 {
@@ -1114,7 +1178,7 @@ void cardCounterShuffle(int card, int &card1, int &card2, int &card3, int &card4
 // **************************************************************************
 // Function that assigns the points for each card in deck                   *
 // **************************************************************************
-int cardPoints(int card)
+int cardPoints(const int card)
 {
     // Local variable
     int points = 0; // Stores the points the card is worth and returns it to the functioned that called it
