@@ -67,7 +67,7 @@ bool bust = false;        // Flag for bust
 bool doubleDown = false;  // Flag for double down
 bool hit = false;         // Flag for hit
 bool stand = false;       // Flag for stand
-bool canSplit = true;     // Flag for split availability
+bool canSplit = false;     // Flag for split availability
 bool handIsSplit = false; // Flag showing hand has been split
 
 // Function prototypes
