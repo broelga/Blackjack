@@ -1,4 +1,12 @@
-v0.17
+v0.17.2
+Improved and optimized menu. 
+Splitting is working consistently.
+When hand is split player will first be prompted to choose play for hand #1 and then hand #2.
+Issues:
+Both hand #1 and hand #2 are changed each round by stand, hit or doubleDown no matter which hand is shown.
+This will be managed by reconfiguring functions and posssible menuing in order to control each hand respectively.
+
+v0.17.1
 Additional functionality - splitHand is now working. 
 Some functionality needs to be implemented such as the ability to control each hand separately. 
 This is next on the list.
